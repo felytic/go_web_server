@@ -20,11 +20,15 @@ type Plan struct {
 	Price float32
 }
 
-func connectDB(path string) {
-	conn, err := sql.Open("sqlite3", path)
+func handleErr(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func connectDB(path string) {
+	conn, err := sql.Open("sqlite3", path)
+	handleErr(err)
 
 	db = conn
 	log.Print("Connected to database")
@@ -39,9 +43,7 @@ func getPlans() []Plan {
 	query := `SELECT id, name, price FROM plan`
 
 	rows, err := db.Query(query)
-	if err != nil {
-		log.Fatal(err)
-	}
+	handleErr(err)
 	defer rows.Close()
 
 	var plans []Plan
@@ -49,9 +51,7 @@ func getPlans() []Plan {
 	for rows.Next() {
 		plan := Plan{}
 		err = rows.Scan(&plan.Id, &plan.Name, &plan.Price)
-		if err != nil {
-			log.Fatal(err)
-		}
+		handleErr(err)
 
 		plans = append(plans, plan)
 	}
