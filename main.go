@@ -1,6 +1,7 @@
 package main
 
 import (
+	"./plans"
 	"database/sql"
 	"fmt"
 	"log"
@@ -14,21 +15,9 @@ const port int = 8081
 
 var db *sql.DB
 
-type Plan struct {
-	Id    int
-	Name  string
-	Price float32
-}
-
-func handleErr(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func connectDB(path string) {
 	conn, err := sql.Open("sqlite3", path)
-	handleErr(err)
+	plans.HandleErr(err)
 
 	db = conn
 	log.Print("Connected to database")
@@ -39,28 +28,8 @@ func disconnectDB() {
 	log.Print("Disconnected from database")
 }
 
-func getPlans() []Plan {
-	query := `SELECT id, name, price FROM plan`
-
-	rows, err := db.Query(query)
-	handleErr(err)
-	defer rows.Close()
-
-	var plans []Plan
-
-	for rows.Next() {
-		plan := Plan{}
-		err = rows.Scan(&plan.Id, &plan.Name, &plan.Price)
-		handleErr(err)
-
-		plans = append(plans, plan)
-	}
-
-	return plans
-}
-
 func processRequest(writer http.ResponseWriter, request *http.Request) {
-	plans := getPlans()
+	plans := plans.GetPlans(db)
 	fmt.Fprintln(writer, plans)
 	log.Print("[REQUEST] ", request.URL)
 }
