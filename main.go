@@ -6,16 +6,17 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"./plans"
 
+	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const port int = 8081
-const dbPath = "./db.sqlite3"
-
+var dbHost string
+var port string
 var db *sql.DB
 
 func connectDB(path string) {
@@ -52,14 +53,27 @@ func errorHandler(writer http.ResponseWriter, request *http.Request) {
 	log.Print("[REQUEST] ", request.URL)
 }
 
+func initEnv() {
+	err := godotenv.Load(".env")
+
+	port = os.Getenv("APP_PORT")
+	dbHost = os.Getenv("DB_HOST")
+
+	if port == "" || dbHost == "" || err != nil {
+		log.Fatal("Error loading environment variables")
+	}
+}
+
 func main() {
+	initEnv()
+
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/subscribe", subscribeHandler)
 	http.HandleFunc("/error", errorHandler)
 
-	connectDB(dbPath)
+	connectDB(dbHost)
 	defer disconnectDB()
 
 	log.Print("Started server at port ", port)
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(port), nil))
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
