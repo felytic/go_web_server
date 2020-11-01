@@ -3,7 +3,7 @@ package main
 import (
 	"./plans"
 	"database/sql"
-	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,6 +12,7 @@ import (
 )
 
 const port int = 8081
+const dbPath = "./db.sqlite3"
 
 var db *sql.DB
 
@@ -30,14 +31,15 @@ func disconnectDB() {
 
 func processRequest(writer http.ResponseWriter, request *http.Request) {
 	plans := plans.GetPlans(db)
-	fmt.Fprintln(writer, plans)
+	page_template := template.Must(template.ParseFiles("templates/plans.html"))
+	page_template.Execute(writer, plans)
 	log.Print("[REQUEST] ", request.URL)
 }
 
 func main() {
 	http.HandleFunc("/", processRequest)
 
-	connectDB("./db.sqlite3")
+	connectDB(dbPath)
 	defer disconnectDB()
 
 	log.Print("Started server at port ", port)
