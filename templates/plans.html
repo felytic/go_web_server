@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="">
@@ -9,31 +10,33 @@
     <!-- Bootstrap core CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
 
-  </head>
-  <body>
-</div>
+</head>
 
-<div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
-  <h1 class="display-4">Pricing</h1>
-</div>
+<body>
+    </div>
 
-<div class="container">
-    <div class="card-deck mb-3 text-center">
-      {{range .}}
-      <div class="card mb-4 shadow-sm">
-        <div class="card-header">
-          <h4 class="my-0 font-weight-normal">{{.Name}}</h4>
+    <div class="pricing-header px-3 py-3 pt-md-5 pb-md-4 mx-auto text-center">
+        <h1 class="display-4">Pricing</h1>
+    </div>
+
+    <div class="container">
+        <div class="card-deck mb-3 text-center">
+            {{range .}}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">
+                    <h4 class="my-0 font-weight-normal">{{.Name}}</h4>
+                </div>
+                <div class="card-body">
+                    <h1 class="card-title pricing-card-title">${{.Price}} <small class="text-muted">/ mo</small></h1>
+                    <a href="/subscribe?id={{.Id}}" class="btn btn-lg btn-block btn-primary">Subscribe</a>
+                </div>
+            </div>
+            {{end}}
         </div>
-        <div class="card-body">
-          <h1 class="card-title pricing-card-title">${{.Price}} <small class="text-muted">/ mo</small></h1>
-          <a href="/subscribe?id={{.Id}}" class="btn btn-lg btn-block btn-primary">Subscribe</a>
-        </div>
-      </div>
-      {{end}}
-      </div>
-</div>
+    </div>
 
-</div>
+    </div>
 </body>
+
 </html>
-<!doctype html>
+<!doctype html> 

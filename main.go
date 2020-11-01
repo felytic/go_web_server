@@ -31,7 +31,7 @@ func disconnectDB() {
 	log.Print("Disconnected from database")
 }
 
-func processRequest(writer http.ResponseWriter, request *http.Request) {
+func indexHandler(writer http.ResponseWriter, request *http.Request) {
 	plans := plans.GetPlans(db)
 	page_template := template.Must(template.ParseFiles("templates/plans.html"))
 	page_template.Execute(writer, plans)
@@ -46,9 +46,16 @@ func subscribeHandler(writer http.ResponseWriter, request *http.Request) {
 	log.Print("[REQUEST] ", request.URL)
 }
 
+func errorHandler(writer http.ResponseWriter, request *http.Request) {
+	page_template := template.Must(template.ParseFiles("templates/error.html"))
+	page_template.Execute(writer, nil)
+	log.Print("[REQUEST] ", request.URL)
+}
+
 func main() {
-	http.HandleFunc("/", processRequest)
+	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/subscribe", subscribeHandler)
+	http.HandleFunc("/error", errorHandler)
 
 	connectDB(dbPath)
 	defer disconnectDB()
