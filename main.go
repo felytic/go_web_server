@@ -1,12 +1,14 @@
 package main
 
 import (
-	"./plans"
 	"database/sql"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"strconv"
+
+	"./plans"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -36,8 +38,17 @@ func processRequest(writer http.ResponseWriter, request *http.Request) {
 	log.Print("[REQUEST] ", request.URL)
 }
 
+func subscribeHandler(writer http.ResponseWriter, request *http.Request) {
+	planId, err := strconv.Atoi(request.URL.Query().Get("id"))
+	plans.HandleErr(err)
+	plan := plans.GetPlanById(db, planId)
+	fmt.Fprintln(writer, plan)
+	log.Print("[REQUEST] ", request.URL)
+}
+
 func main() {
 	http.HandleFunc("/", processRequest)
+	http.HandleFunc("/subscribe", subscribeHandler)
 
 	connectDB(dbPath)
 	defer disconnectDB()
