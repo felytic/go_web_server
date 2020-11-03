@@ -37,11 +37,10 @@ func GetPlans(db *sql.DB) []Plan {
 	return plans
 }
 
-func GetPlanById(db *sql.DB, id int) Plan {
+func GetPlanById(db *sql.DB, id int) (Plan, error) {
 	query := `SELECT id, name, price FROM plan WHERE id  = ?`
 	plan := Plan{}
 	err := db.QueryRow(query, id).Scan(&plan.Id, &plan.Name, &plan.Price)
-	HandleErr(err)
 
-	return plan
+	return plan, err
 }

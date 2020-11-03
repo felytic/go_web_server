@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"./payments"
 	"./plans"
 
 	"github.com/joho/godotenv"
@@ -44,17 +45,43 @@ func indexHandler(writer http.ResponseWriter, request *http.Request) {
 	log.Print("[REQUEST] ", request.URL)
 }
 
-func subscribeHandler(writer http.ResponseWriter, request *http.Request) {
-	planId, err := strconv.Atoi(request.URL.Query().Get("id"))
-	plans.HandleErr(err)
-	plan := plans.GetPlanById(db, planId)
-	fmt.Fprintln(writer, plan)
-	log.Print("[REQUEST] ", request.URL)
+func isAllResponsesOk(responses []payments.PaymentResponse) bool {
+	for _, response := range responses {
+		if response.Err != nil {
+			return false
+		}
+		if response.Res.StatusCode != 200 {
+			return false
+		}
+	}
+
+	return true
 }
 
-func errorHandler(writer http.ResponseWriter, request *http.Request) {
-	page_template := template.Must(template.ParseFiles("templates/error.html"))
-	page_template.Execute(writer, nil)
+func subscribeHandler(writer http.ResponseWriter, request *http.Request) {
+	planId, err := strconv.Atoi(request.URL.Query().Get("id"))
+
+	if err != nil {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, err = plans.GetPlanById(db, planId)
+
+	if err != nil {
+		writer.WriteHeader(http.StatusNotFound)
+		fmt.Fprintln(writer, "Plan not found")
+		return
+	}
+
+	responses := payments.GetPaymentResponses(planId)
+	if isAllResponsesOk(responses) {
+		fmt.Fprintln(writer, responses)
+	} else {
+		page_template := template.Must(template.ParseFiles("templates/error.html"))
+		page_template.Execute(writer, nil)
+	}
+
 	log.Print("[REQUEST] ", request.URL)
 }
 
@@ -76,7 +103,6 @@ func createServer(addr string) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/subscribe", subscribeHandler)
-	mux.HandleFunc("/error", errorHandler)
 
 	return &http.Server{Addr: addr, Handler: mux}
 }
