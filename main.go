@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"time"
 
 	"./plans"
 
@@ -17,6 +20,8 @@ import (
 
 var dbHost string
 var port string
+var shutdownTimeout time.Duration
+
 var db *sql.DB
 
 func connectDB(path string) {
@@ -58,22 +63,60 @@ func initEnv() {
 
 	port = os.Getenv("APP_PORT")
 	dbHost = os.Getenv("DB_HOST")
+	duration, _ := strconv.Atoi(os.Getenv("APP_SHUTDOWN_TIMEOUT"))
+	shutdownTimeout = time.Duration(duration) * time.Second
 
 	if port == "" || dbHost == "" || err != nil {
 		log.Fatal("Error loading environment variables")
 	}
 }
 
+func createServer(addr string) *http.Server {
+	connectDB(dbHost)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", indexHandler)
+	mux.HandleFunc("/subscribe", subscribeHandler)
+	mux.HandleFunc("/error", errorHandler)
+
+	return &http.Server{Addr: addr, Handler: mux}
+}
+
+func runServer(server *http.Server) {
+	// Run server in gorutine
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	log.Print("Started server at port ", port)
+}
+
+func stopServer(server *http.Server) {
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatal(err)
+	}
+	log.Print("Server stopped succesfully")
+
+	disconnectDB()
+}
+
 func main() {
+	// Read environmet variables
 	initEnv()
 
-	http.HandleFunc("/", indexHandler)
-	http.HandleFunc("/subscribe", subscribeHandler)
-	http.HandleFunc("/error", errorHandler)
+	addr := ":" + port
 
-	connectDB(dbHost)
-	defer disconnectDB()
+	server := createServer(addr)
 
-	log.Print("Started server at port ", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	runServer(server)
+
+	// Wait for interrupt signal
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+	<-interrupt
+
+	stopServer(server)
 }
