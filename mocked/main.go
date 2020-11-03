@@ -8,22 +8,23 @@ import (
 	"net/http"
 )
 
-const failurePercentage = 15
+type handlerFuncType func(http.ResponseWriter, *http.Request)
 
 type UrlResponse struct {
 	Url  string `json:"url"`
 	Name string `json:"name"`
 }
 
-func GetIP(r *http.Request) string {
+const failurePercentage = 15
+
+func getRequestIP(r *http.Request) string {
 	forwarded := r.Header.Get("X-FORWARDED-FOR")
+
 	if forwarded != "" {
 		return forwarded
 	}
 	return r.RemoteAddr
 }
-
-type handlerFuncType func(http.ResponseWriter, *http.Request)
 
 func payResponseHandler(name string, url string) handlerFuncType {
 	payResponse := UrlResponse{
@@ -33,38 +34,39 @@ func payResponseHandler(name string, url string) handlerFuncType {
 
 	respJSON, err := json.Marshal(payResponse)
 
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return func(writer http.ResponseWriter, request *http.Request) {
-		if err != nil {
-			log.Print("[ERROR]", err)
-			fmt.Fprintln(writer, err)
-		}
+		prefix := fmt.Sprintf("[%s] %s ", name, getRequestIP(request))
 
 		// throw 500 error with 15% probability
 		if rand.Intn(100) < failurePercentage {
-			log.Print("[", GetIP(request), "] 500 Internal Server Error")
+			log.Print(prefix, "500 Internal Server Error")
 			writer.WriteHeader(http.StatusInternalServerError)
+
 		} else {
-			log.Print("[", GetIP(request), "] 200 OK")
+			log.Print(prefix, "200 OK")
 			writer.Header().Set("Content-Type", "application/json")
 			writer.Write(respJSON)
 		}
 	}
-
 }
 
 func runPaymentServer(port string, name string, url string) {
+	addr := ":" + port
 	mux := http.NewServeMux()
 	handler := payResponseHandler(name, url)
 	mux.HandleFunc("/", handler)
 
-	addr := ":" + port
 	server := http.Server{
 		Addr:    addr,
 		Handler: mux,
 	}
-	log.Print("Started ", name, "server at port ", port)
-	log.Fatal(server.ListenAndServe())
 
+	log.Print("Started ", name, " server at port ", port)
+	log.Fatal(server.ListenAndServe())
 }
 
 func main() {
