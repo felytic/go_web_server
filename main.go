@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -45,12 +46,9 @@ func indexHandler(writer http.ResponseWriter, request *http.Request) {
 	log.Print("[REQUEST] ", request.URL)
 }
 
-func isAllResponsesOk(responses []payments.PaymentResponse) bool {
+func isAllResponsesOk(responses []payments.ProviderResponse) bool {
 	for _, response := range responses {
-		if response.Err != nil {
-			return false
-		}
-		if response.Res.StatusCode != 200 {
+		if response.Err != nil || response.Url == "" {
 			return false
 		}
 	}
@@ -59,6 +57,8 @@ func isAllResponsesOk(responses []payments.PaymentResponse) bool {
 }
 
 func subscribeHandler(writer http.ResponseWriter, request *http.Request) {
+	log.Print("[REQUEST] ", request.URL)
+
 	planId, err := strconv.Atoi(request.URL.Query().Get("id"))
 
 	if err != nil {
@@ -74,15 +74,14 @@ func subscribeHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	responses := payments.GetPaymentResponses(planId)
-	if isAllResponsesOk(responses) {
-		fmt.Fprintln(writer, responses)
+	urlResponses := payments.GetProvidersURLs(planId)
+	if isAllResponsesOk(urlResponses) {
+		writer.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(writer).Encode(urlResponses)
 	} else {
-		page_template := template.Must(template.ParseFiles("templates/error.html"))
-		page_template.Execute(writer, nil)
+		writer.WriteHeader(http.StatusServiceUnavailable)
+		fmt.Fprintln(writer, "Unable to get data from payment providers")
 	}
-
-	log.Print("[REQUEST] ", request.URL)
 }
 
 func initEnv() {
@@ -91,6 +90,7 @@ func initEnv() {
 	port = os.Getenv("APP_PORT")
 	dbHost = os.Getenv("DB_HOST")
 	duration, _ := strconv.Atoi(os.Getenv("APP_SHUTDOWN_TIMEOUT"))
+
 	shutdownTimeout = time.Duration(duration) * time.Second
 
 	if port == "" || dbHost == "" || err != nil {
@@ -100,6 +100,7 @@ func initEnv() {
 
 func createServer(addr string) *http.Server {
 	connectDB(dbHost)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/subscribe", subscribeHandler)
@@ -108,12 +109,12 @@ func createServer(addr string) *http.Server {
 }
 
 func runServer(server *http.Server) {
-	// Run server in gorutine
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			log.Fatal(err)
 		}
 	}()
+
 	log.Print("Started server at port ", port)
 }
 

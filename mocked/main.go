@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -9,11 +8,6 @@ import (
 )
 
 type handlerFuncType func(http.ResponseWriter, *http.Request)
-
-type UrlResponse struct {
-	Url  string `json:"url"`
-	Name string `json:"name"`
-}
 
 const failurePercentage = 15
 
@@ -27,17 +21,6 @@ func getRequestIP(r *http.Request) string {
 }
 
 func payResponseHandler(name string, url string) handlerFuncType {
-	payResponse := UrlResponse{
-		Url:  url,
-		Name: name,
-	}
-
-	respJSON, err := json.Marshal(payResponse)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	return func(writer http.ResponseWriter, request *http.Request) {
 		prefix := fmt.Sprintf("[%s] %s ", name, getRequestIP(request))
 
@@ -48,8 +31,7 @@ func payResponseHandler(name string, url string) handlerFuncType {
 
 		} else {
 			log.Print(prefix, "200 OK")
-			writer.Header().Set("Content-Type", "application/json")
-			writer.Write(respJSON)
+			fmt.Fprintln(writer, url)
 		}
 	}
 }

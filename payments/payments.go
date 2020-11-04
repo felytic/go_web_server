@@ -1,7 +1,9 @@
 package payments
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 )
@@ -13,25 +15,40 @@ var paymentURLs = map[string]string{
 	"stripeUrl":    "http://0.0.0.0:8093",
 }
 
-type PaymentResponse struct {
+type ProviderResponse struct {
 	Name string
-	Res  http.Response
+	Url  string
 	Err  error
 }
 
-func getProviderResponse(name string, planId int) *PaymentResponse {
+func getProviderResponse(name string, planId int) *ProviderResponse {
 	url := paymentURLs[name]
-	resp, err := http.Get(fmt.Sprintf("%s?planId=%v", url, planId))
+	addr := fmt.Sprintf("%s?planId=%v", url, planId)
+	response, err := http.Get(addr)
 
 	if err != nil {
-		log.Print("[ERROR] ", err)
+		log.Print("[ERROR] GET ", addr, " returned ", err)
+		return &ProviderResponse{name, "", err}
 	}
 
-	return &PaymentResponse{name, *resp, err}
+	if response.StatusCode != 200 {
+		log.Print("[ERROR] GET ", addr, " returned ", response.Status)
+		return &ProviderResponse{name, "", errors.New(response.Status)}
+	}
+
+	responseData, err := ioutil.ReadAll(response.Body)
+
+	if err != nil {
+		log.Print("[ERROR] GET ", addr, " : ", err)
+		return &ProviderResponse{name, "", err}
+	}
+
+	return &ProviderResponse{name, string(responseData), err}
 }
 
-func GetPaymentResponses(planId int) []PaymentResponse {
-	resultsChan := make(chan *PaymentResponse)
+func GetProvidersURLs(planId int) []ProviderResponse {
+	// Chanel for storing all async responses
+	resultsChan := make(chan *ProviderResponse)
 
 	// make sure we close these channels when we're done with them
 	defer func() {
@@ -40,12 +57,11 @@ func GetPaymentResponses(planId int) []PaymentResponse {
 
 	for name := range paymentURLs {
 		go func(name string) {
-			resp := getProviderResponse(name, planId)
-			resultsChan <- resp
+			resultsChan <- getProviderResponse(name, planId)
 		}(name)
 	}
 
-	var results []PaymentResponse
+	var results []ProviderResponse
 
 	for {
 		result := <-resultsChan
