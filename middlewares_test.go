@@ -1,6 +1,7 @@
-package middlewares
+package main
 
 import (
+	"./middlewares"
 	"fmt"
 	"net/http"
 	"testing"
@@ -26,7 +27,7 @@ func (w *MyResponseWriter) WriteHeader(statusCode int) {
 }
 
 func TestWrap(t *testing.T) {
-	newHandler := Wrap(dummyHandler)
+	newHandler := middlewares.Wrap(dummyHandler)
 	writer := &MyResponseWriter{http.Header{}}
 	request := new(http.Request)
 	request.Host = "http://go.com"

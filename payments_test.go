@@ -1,6 +1,7 @@
-package payments
+package main
 
 import (
+	"./payments"
 	"bytes"
 	"errors"
 	"io/ioutil"
@@ -13,38 +14,38 @@ import (
 func TestIsAllResponsesOk(t *testing.T) {
 	tests := []struct {
 		name      string
-		responses []ProviderResponse
+		responses []payments.ProviderResponse
 		want      bool
 	}{
 		{"Nil", nil, true},
 		{
 			"AllOk",
-			[]ProviderResponse{
-				ProviderResponse{"go1", "http://go1.com", nil},
-				ProviderResponse{"go2", "http://go2.com", nil},
+			[]payments.ProviderResponse{
+				payments.ProviderResponse{"go1", "http://go1.com", nil},
+				payments.ProviderResponse{"go2", "http://go2.com", nil},
 			},
 			true,
 		},
 		{
 			"OneOk",
-			[]ProviderResponse{
-				ProviderResponse{"go1", "", nil},
-				ProviderResponse{"go2", "http://go2.com", nil},
+			[]payments.ProviderResponse{
+				payments.ProviderResponse{"go1", "", nil},
+				payments.ProviderResponse{"go2", "http://go2.com", nil},
 			},
 			false,
 		},
 		{
 			"NotOk",
-			[]ProviderResponse{
-				ProviderResponse{"go1", "http://error.com", errors.New("Err")},
-				ProviderResponse{"go2", "http://go2.com", nil},
+			[]payments.ProviderResponse{
+				payments.ProviderResponse{"go1", "http://error.com", errors.New("Err")},
+				payments.ProviderResponse{"go2", "http://go2.com", nil},
 			},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsAllResponsesOk(tt.responses); got != tt.want {
+			if got := payments.IsAllResponsesOk(tt.responses); got != tt.want {
 				t.Errorf("IsAllResponsesOk() = %v, want %v", got, tt.want)
 			}
 		})
@@ -73,7 +74,7 @@ func Test_constructProviderResponse(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *ProviderResponse
+		want *payments.ProviderResponse
 	}{
 		{
 			"nil",
@@ -82,7 +83,7 @@ func Test_constructProviderResponse(t *testing.T) {
 				nil,
 				errors.New("Bad request"),
 			},
-			&ProviderResponse{
+			&payments.ProviderResponse{
 				"nil",
 				"",
 				errors.New("Bad request"),
@@ -95,7 +96,7 @@ func Test_constructProviderResponse(t *testing.T) {
 				okResp,
 				nil,
 			},
-			&ProviderResponse{
+			&payments.ProviderResponse{
 				"OK",
 				"http://go.com",
 				nil,
@@ -108,7 +109,7 @@ func Test_constructProviderResponse(t *testing.T) {
 				okResp,
 				errors.New("err"),
 			},
-			&ProviderResponse{
+			&payments.ProviderResponse{
 				"notOK",
 				"",
 				errors.New("err"),
@@ -121,7 +122,7 @@ func Test_constructProviderResponse(t *testing.T) {
 				badResp,
 				nil,
 			},
-			&ProviderResponse{
+			&payments.ProviderResponse{
 				"badRespWithNoErr",
 				"",
 				errors.New("500 Internal Server Error"),
@@ -130,8 +131,8 @@ func Test_constructProviderResponse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := constructProviderResponse(tt.args.name, tt.args.response, tt.args.err); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("constructProviderResponse() = %v, want %v", got, tt.want)
+			if got := payments.ConstructProviderResponse(tt.args.name, tt.args.response, tt.args.err); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ConstructProviderResponse() = %v, want %v", got, tt.want)
 			}
 		})
 	}

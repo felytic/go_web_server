@@ -31,7 +31,7 @@ func IsAllResponsesOk(responses []ProviderResponse) bool {
 	return true
 }
 
-func constructProviderResponse(name string, response *http.Response, err error) *ProviderResponse {
+func ConstructProviderResponse(name string, response *http.Response, err error) *ProviderResponse {
 	if err != nil {
 		log.Print("[ERROR] GET ", name, " URL returned ", err)
 		return &ProviderResponse{name, "", err}
@@ -56,7 +56,7 @@ func getProviderResponse(name string, planId int) *ProviderResponse {
 	url := paymentURLs[name]
 	response, err := http.Get(fmt.Sprintf("%s?planId=%v", url, planId))
 
-	return constructProviderResponse(name, response, err)
+	return ConstructProviderResponse(name, response, err)
 }
 
 func GetProvidersURLs(planId int) []ProviderResponse {
