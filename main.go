@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 
+	"./middlewares"
 	"./payments"
 	"./plans"
 
@@ -28,7 +29,9 @@ var db *sql.DB
 
 func connectDB(path string) {
 	conn, err := sql.Open("sqlite3", path)
-	plans.HandleErr(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	db = conn
 	log.Print("Connected to database")
@@ -40,25 +43,21 @@ func disconnectDB() {
 }
 
 func indexHandler(writer http.ResponseWriter, request *http.Request) {
-	plans := plans.GetPlans(db)
-	page_template := template.Must(template.ParseFiles("templates/plans.html"))
-	page_template.Execute(writer, plans)
-	log.Print("[REQUEST] ", request.URL)
-}
+	plans, err := plans.GetPlans(db)
 
-func isAllResponsesOk(responses []payments.ProviderResponse) bool {
-	for _, response := range responses {
-		if response.Err != nil || response.Url == "" {
-			return false
-		}
+	if err != nil {
+		// Show page with error
+		page_template := template.Must(template.ParseFiles("templates/error.html"))
+		page_template.Execute(writer, nil)
+		return
 	}
 
-	return true
+	// Show page with plans
+	page_template := template.Must(template.ParseFiles("templates/plans.html"))
+	page_template.Execute(writer, plans)
 }
 
 func subscribeHandler(writer http.ResponseWriter, request *http.Request) {
-	log.Print("[REQUEST] ", request.URL)
-
 	planId, err := strconv.Atoi(request.URL.Query().Get("id"))
 
 	if err != nil {
@@ -75,9 +74,11 @@ func subscribeHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	urlResponses := payments.GetProvidersURLs(planId)
-	if isAllResponsesOk(urlResponses) {
+
+	if payments.IsAllResponsesOk(urlResponses) {
 		writer.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(writer).Encode(urlResponses)
+
 	} else {
 		writer.WriteHeader(http.StatusServiceUnavailable)
 		fmt.Fprintln(writer, "Unable to get data from payment providers")
@@ -102,8 +103,8 @@ func createServer(addr string) *http.Server {
 	connectDB(dbHost)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", indexHandler)
-	mux.HandleFunc("/subscribe", subscribeHandler)
+	mux.HandleFunc("/", middlewares.Wrap(indexHandler))
+	mux.HandleFunc("/subscribe", middlewares.Wrap(subscribeHandler))
 
 	return &http.Server{Addr: addr, Handler: mux}
 }
@@ -131,7 +132,7 @@ func stopServer(server *http.Server) {
 }
 
 func main() {
-	// Read environmet variables
+	// Read environmet variables from .env file
 	initEnv()
 
 	addr := ":" + port

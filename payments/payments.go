@@ -21,6 +21,16 @@ type ProviderResponse struct {
 	Err  error
 }
 
+func IsAllResponsesOk(responses []ProviderResponse) bool {
+	for _, response := range responses {
+		if response.Err != nil || response.Url == "" {
+			return false
+		}
+	}
+
+	return true
+}
+
 func getProviderResponse(name string, planId int) *ProviderResponse {
 	url := paymentURLs[name]
 	addr := fmt.Sprintf("%s?planId=%v", url, planId)

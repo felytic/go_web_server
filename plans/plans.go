@@ -5,23 +5,21 @@ import (
 	"log"
 )
 
-func HandleErr(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 type Plan struct {
 	Id    int
 	Name  string
 	Price float32
 }
 
-func GetPlans(db *sql.DB) []Plan {
+func GetPlans(db *sql.DB) ([]Plan, error) {
 	query := `SELECT id, name, price FROM plan`
 
 	rows, err := db.Query(query)
-	HandleErr(err)
+	if err != nil {
+		log.Print("[ERROR] ", err)
+		return nil, err
+	}
+
 	defer rows.Close()
 
 	var plans []Plan
@@ -29,12 +27,15 @@ func GetPlans(db *sql.DB) []Plan {
 	for rows.Next() {
 		plan := Plan{}
 		err = rows.Scan(&plan.Id, &plan.Name, &plan.Price)
-		HandleErr(err)
+		if err != nil {
+			log.Print("[ERROR] ", err)
+			return nil, err
+		}
 
 		plans = append(plans, plan)
 	}
 
-	return plans
+	return plans, nil
 }
 
 func GetPlanById(db *sql.DB, id int) (Plan, error) {
