@@ -31,29 +31,32 @@ func IsAllResponsesOk(responses []ProviderResponse) bool {
 	return true
 }
 
-func getProviderResponse(name string, planId int) *ProviderResponse {
-	url := paymentURLs[name]
-	addr := fmt.Sprintf("%s?planId=%v", url, planId)
-	response, err := http.Get(addr)
-
+func constructProviderResponse(name string, response *http.Response, err error) *ProviderResponse {
 	if err != nil {
-		log.Print("[ERROR] GET ", addr, " returned ", err)
+		log.Print("[ERROR] GET ", name, " URL returned ", err)
 		return &ProviderResponse{name, "", err}
 	}
 
 	if response.StatusCode != 200 {
-		log.Print("[ERROR] GET ", addr, " returned ", response.Status)
+		log.Print("[ERROR] GET ", response.Request.URL, " returned ", response.Status)
 		return &ProviderResponse{name, "", errors.New(response.Status)}
 	}
 
 	responseData, err := ioutil.ReadAll(response.Body)
 
 	if err != nil {
-		log.Print("[ERROR] GET ", addr, " : ", err)
+		log.Print("[ERROR] GET ", response.Request.URL, " : ", err)
 		return &ProviderResponse{name, "", err}
 	}
 
 	return &ProviderResponse{name, string(responseData), err}
+}
+
+func getProviderResponse(name string, planId int) *ProviderResponse {
+	url := paymentURLs[name]
+	response, err := http.Get(fmt.Sprintf("%s?planId=%v", url, planId))
+
+	return constructProviderResponse(name, response, err)
 }
 
 func GetProvidersURLs(planId int) []ProviderResponse {
